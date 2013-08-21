@@ -38,43 +38,34 @@ import weka.gui.beans.ClassifierPerformanceEvaluator;
 
 public class EMEATraps {
 
-    private static final String MODEL_FILE = "/export/Development/DataMining/TrapsEMEA/Model_50k_ac.model";
-    private static final String DATA_TEST_FILE = "/export/Development/DataMining/TrapsEMEA/TrapsEMEA_50k_ad.arff";
-
     public static void main(String[] args) throws Exception {
-        // Read Train Data
-        Instances dataTest = new Instances(new BufferedReader(new FileReader(DATA_TEST_FILE)));
-        Remove remFilter = new Remove();
-        remFilter.setAttributeIndices("8");
-        remFilter.setInputFormat(dataTest);
-        Instances data = Filter.useFilter(dataTest, remFilter);
-        data.setClassIndex(data.numAttributes() - 1);
 
-        // String to Vector
-        StringToWordVector str2VecFlt = new StringToWordVector();
-        str2VecFlt.setInputFormat(data);
-        // Instances vetorData = Filter.useFilter(data, str2Vec);
+        if (args.length < 2 ) {
+            printUsage();
+        }
 
-        FilteredClassifier cls;
+        Engine engin = new Engine();
+        String result = "";
+        if (args.length >= 3) {
+            engin.setModelfile(args[2]);
+        }
 
-        // Make Model
-        J48 j48Class = new J48();
-        j48Class.setUnpruned(true);
+        engin.setDataFile(args[1]);
 
-        cls = new FilteredClassifier();
-        cls.setFilter(str2VecFlt);
-        cls.setClassifier(j48Class);
-        // train 
-        cls.buildClassifier(data);
+        if (args[0].equalsIgnoreCase("test")) {
+            engin.setDataTrainFile(args[3]);
+            result = engin.testData();
+        } else if (args[0].equalsIgnoreCase("retrain")) {
+            result = engin.retrainModel();
+        } else if (args[0].equalsIgnoreCase("train")) {
+            result = engin.trainModel();
+        }
+        System.out.println(result);
+    }
 
-        weka.core.SerializationHelper.write(MODEL_FILE, cls);
-
-        // Load Model
-        //cls = (Classifier) weka.core.SerializationHelper.read(MODEL_FILE);
-
-        // Evaluate
-        //Evaluation eval = new Evaluation(vetorData);
-        //eval.evaluateModel(cls, vetorData);
-        //System.out.println(eval.toSummaryString("\nResults\n======\n", false));
+    private static void printUsage() {
+        System.out.println(" EMEATraps test DATA_FILE [MODEL_FILE MODEL_DATA] ");
+        System.out.println(" EMEATraps retrain DATA_FILE [MODEL_FILE]");
+        System.out.println(" EMEATraps train DATA_FILE [MODEL_FILE] ");
     }
 }
