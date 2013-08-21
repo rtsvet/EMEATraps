@@ -43,7 +43,6 @@ public class Engine {
 
     private String modelFile = "/export/Development/DataMining/TrapsEMEA/Short/Model_Traps_Short_aa.model";
     private String dataFile = "/export/Development/DataMining/TrapsEMEA/Short/Traps_Short_ab.arff";
-    private String dataTrainFile = "/export/Development/DataMining/TrapsEMEA/Short/Traps_Short_aa.arff";
     private FilteredClassifier cls;
     private Instances dataInst;
     private Instances dataTrainInst;
@@ -53,16 +52,6 @@ public class Engine {
 
     public void setModelfile(String modelfile) {
         this.modelFile = modelfile;
-    }
-
-    public void setDataTrainFile(String dataTrainFile) throws Exception {
-        this.dataTrainFile = dataTrainFile;
-        Instances rowTrainData = new Instances(new BufferedReader(new FileReader(dataTrainFile)));
-        Remove remFilter = new Remove();
-        remFilter.setAttributeIndices("8");
-        remFilter.setInputFormat(rowTrainData);
-        dataTrainInst = Filter.useFilter(rowTrainData, remFilter);
-        dataTrainInst.setClassIndex(dataTrainInst.numAttributes() - 1);
     }
 
     public void setDataFile(String df) throws Exception {
@@ -95,19 +84,24 @@ public class Engine {
         // train 
         cls.buildClassifier(dataInst);
 
-        weka.core.SerializationHelper.write(modelFile, cls);
+        Object[] objPack = {cls, dataInst};
+        weka.core.SerializationHelper.writeAll(modelFile, objPack);
         return "OK";
     }
 
     public String retrainModel() throws Exception {
         // Load Model
-        cls = (FilteredClassifier) weka.core.SerializationHelper.read(modelFile);
+        Object[] objectPack = weka.core.SerializationHelper.readAll(modelFile);
+        cls = (FilteredClassifier) objectPack[0];
+        dataTrainInst = (Instances) objectPack[1];
         return "OK";
     }
 
     public String testData() throws Exception {
         // Load Model
-        cls = (FilteredClassifier) weka.core.SerializationHelper.read(modelFile);
+        Object[] objectPack = weka.core.SerializationHelper.readAll(modelFile);
+        cls = (FilteredClassifier) objectPack[0];
+        dataTrainInst = (Instances) objectPack[1];
 
         // Evalutor
         //<editor-fold defaultstate="collapsed" desc="comment">

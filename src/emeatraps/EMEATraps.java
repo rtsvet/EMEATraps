@@ -40,20 +40,21 @@ public class EMEATraps {
 
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 2 ) {
+        if (args.length < 2 || args.length > 3 ) {
             printUsage();
         }
 
         Engine engin = new Engine();
         String result = "";
-        if (args.length >= 3) {
+        if (args.length == 3 ) {
             engin.setModelfile(args[2]);
+        } else {
+        
         }
 
         engin.setDataFile(args[1]);
 
-        if (args[0].equalsIgnoreCase("test")) {
-            engin.setDataTrainFile(args[3]);
+        if (args[0].equalsIgnoreCase("test")) {            
             result = engin.testData();
         } else if (args[0].equalsIgnoreCase("retrain")) {
             result = engin.retrainModel();
@@ -64,7 +65,7 @@ public class EMEATraps {
     }
 
     private static void printUsage() {
-        System.out.println(" EMEATraps test DATA_FILE [MODEL_FILE MODEL_DATA] ");
+        System.out.println(" EMEATraps test DATA_FILE [MODEL_FILE] ");
         System.out.println(" EMEATraps retrain DATA_FILE [MODEL_FILE]");
         System.out.println(" EMEATraps train DATA_FILE [MODEL_FILE] ");
     }
