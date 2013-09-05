@@ -2,6 +2,7 @@ package emeatraps;
 
 import weka.classifiers.meta.FilteredClassifier;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayesUpdateable;
 import weka.classifiers.functions.SMO;
 import weka.classifiers.meta.FilteredClassifier;
 import weka.classifiers.trees.J48;
@@ -33,7 +35,11 @@ import weka.core.stemmers.Stemmer;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.StringToWordVector;
-import weka.gui.beans.ClassifierPerformanceEvaluator;
+import weka.classifiers.lazy.IBk;
+import weka.core.converters.DatabaseLoader;
+import weka.core.converters.DatabaseSaver;
+import weka.filters.MultiFilter;
+import weka.filters.unsupervised.attribute.StringToNominal;
 
 /**
  *
@@ -41,27 +47,54 @@ import weka.gui.beans.ClassifierPerformanceEvaluator;
  */
 public class Engine {
 
-    private String modelFile = "/export/Development/DataMining/TrapsEMEA/Short/Model_Traps_Short_aa.model";
-    private String dataFile = "/export/Development/DataMining/TrapsEMEA/Short/Traps_Short_ab.arff";
+    private String modelFile = "/export/Development/DataMining/TrapsEMEA/Short/Model_Traps.model";
     private FilteredClassifier cls;
     private Instances dataInst;
-    private Instances dataTrainInst;
+    private int offset;
+    private int limit;
 
     public Engine() {
     }
 
-    public void setModelfile(String modelfile) {
-        this.modelFile = modelfile;
+    public void setOffset(int offset) {
+        this.offset = offset;
     }
 
-    public void setDataFile(String df) throws Exception {
-        this.dataFile = df;
-        Instances rowData = new Instances(new BufferedReader(new FileReader(df)));
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
+    private Instances removeLastRow(Instances di) throws Exception {
         Remove remFilter = new Remove();
-        remFilter.setAttributeIndices("8");
-        remFilter.setInputFormat(rowData);
-        dataInst = Filter.useFilter(rowData, remFilter);
+        remFilter.setAttributeIndices("1,9");
+        remFilter.setInputFormat(di);
+        return Filter.useFilter(di, remFilter);
+    }
+
+    private Instances convertNominalCollumns(Instances di) throws Exception {
+        StringToNominal str2nom = new StringToNominal();
+        str2nom.setAttributeRange("1,2,5,6,7");
+        str2nom.setInputFormat(di);
+        return Filter.useFilter(di, str2nom);
+    }
+
+    private Instances getData() throws Exception {
+        DatabaseLoader dload = new DatabaseLoader();
+        dload.setUrl("jdbc:hsqldb:hsql://localhost:9001/outagesdb");
+        dload.setUser("sa");
+        dload.setPassword("");
+        dload.setCustomPropsFile(new File("/home/cs8170/DatabaseUtils.props"));
+        dload.connectToDatabase();
+        dload.setQuery("SELECT * FROM PUBLIC.OUTAGES LIMIT " + limit + " OFFSET " + offset + " ;");
+        Instances dbData = dload.getDataSet();
+        //System.out.println(dbData);
+        return dbData;
+    }
+
+    void installData() throws Exception {
+        dataInst = convertNominalCollumns(removeLastRow(getData()));
         dataInst.setClassIndex(dataInst.numAttributes() - 1);
+        //System.out.println(dataInst);
     }
 
     /**
@@ -76,7 +109,10 @@ public class Engine {
         j48Class.setUnpruned(true);
 
         // String to Vector
+        //MultiFilter mf = new MultiFilter();
+
         StringToWordVector str2VecFlt = new StringToWordVector();
+        str2VecFlt.setUseStoplist(true);
         str2VecFlt.setInputFormat(dataInst);
         cls = new FilteredClassifier();
         cls.setFilter(str2VecFlt);
@@ -89,19 +125,24 @@ public class Engine {
         return "OK";
     }
 
+    //<editor-fold defaultstate="collapsed" desc="retrainModel">
     public String retrainModel() throws Exception {
         // Load Model
         Object[] objectPack = weka.core.SerializationHelper.readAll(modelFile);
-        cls = (FilteredClassifier) objectPack[0];
-        dataTrainInst = (Instances) objectPack[1];
-        return "OK";
+        Instances oldDataInst = (Instances) objectPack[1];
+        for (Instance instance : oldDataInst) {
+        }
+        dataInst.addAll(0, oldDataInst);
+        //dataInst.setClassIndex(dataInst.numAttributes() - 1);
+        return trainModel();
     }
+    //</editor-fold>
 
     public String testData() throws Exception {
         // Load Model
         Object[] objectPack = weka.core.SerializationHelper.readAll(modelFile);
         cls = (FilteredClassifier) objectPack[0];
-        dataTrainInst = (Instances) objectPack[1];
+        Instances dataTrainedInst = (Instances) objectPack[1];
 
         // Evalutor
         //<editor-fold defaultstate="collapsed" desc="comment">
@@ -117,7 +158,7 @@ public class Engine {
             try {
                 int pred = (int) cls.classifyInstance(i);
                 String actual = dataInst.classAttribute().value((int) i.classValue());
-                String predicted = dataTrainInst.classAttribute().value(pred);
+                String predicted = dataTrainedInst.classAttribute().value(pred);
                 if (!actual.equals(predicted)) {
                     incorrect++;
                     System.out.print("actual: " + actual);
