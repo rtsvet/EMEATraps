@@ -14,6 +14,7 @@ public class EMEATraps {
 
         if (args.length < 2 || args.length > 3) {
             printUsage();
+            System.exit(0);
         }
 
         Properties prop = new Properties();
@@ -36,6 +37,7 @@ public class EMEATraps {
     }
 
     private static void printUsage() {
+        System.out.println("Usage: ");
         System.out.println("java -jar EMEATraps.jar test LIMIT OFFSET ");
         System.out.println("java -jar EMEATraps.jar train LIMIT OFFSET");
     }

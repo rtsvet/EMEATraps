@@ -59,7 +59,7 @@ public class Engine {
     public Engine(Properties prop) {
         this.modelFile = prop.getProperty("model", "Model_Traps.model");
         this.databaseUtilsFile = prop.getProperty("dbutils", "DatabaseUtils.props");
-        this.dbURL = prop.getProperty("dburl","jdbc:hsqldb:hsql://localhost:9001/outagesdb");
+        this.dbURL = prop.getProperty("dburl", "jdbc:hsqldb:hsql://localhost:9001/outagesdb");
     }
 
     public void setOffset(int offset) {
@@ -163,6 +163,7 @@ public class Engine {
         //</editor-fold>
 
         int incorrect = 0;
+        int instNumber = 1;
         for (Instance i : dataInst) {
             try {
                 int pred = (int) cls.classifyInstance(i);
@@ -170,9 +171,9 @@ public class Engine {
                 String predicted = dataTrainedInst.classAttribute().value(pred);
                 if (!actual.equals(predicted)) {
                     incorrect++;
-                    System.out.print("Instance [" + i.toString(2).substring(0, 40) + "... ] ");
-                    System.out.print("actual: " + actual);
-                    System.out.println(", predicted: " + predicted);
+                    System.out.print("Inst[" + instNumber + "] (" + i.toString(2).substring(0, 20) + "...) ");
+                    System.out.print("actual=" + actual);
+                    System.out.println(", pred=" + predicted);
                 }
                 //System.out.print((actual.equals(predicted) ? "MATCH " : "NOT"));
                 //System.out.print("actual: " + actual);
@@ -180,9 +181,10 @@ public class Engine {
             } catch (Exception e) {
                 System.out.println("Instance= " + i + " attrib_7=" + i.stringValue(7));
             }
+            instNumber++;
         }
-        System.out.println("incorrect= " + incorrect + " sample size=" + dataInst.size());
-        System.out.println("\n=> Incorrect Pct= " + (double) incorrect / (double) dataInst.size());
+        System.out.println("\nIncorrect= " + incorrect + " sample size=" + dataInst.size());
+        System.out.println("=> Incorrect Ratio= " + (double) incorrect / (double) dataInst.size());
         return "OK";
     }
 }
