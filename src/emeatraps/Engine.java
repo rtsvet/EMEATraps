@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Properties;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import weka.classifiers.Classifier;
@@ -47,13 +48,18 @@ import weka.filters.unsupervised.attribute.StringToNominal;
  */
 public class Engine {
 
-    private String modelFile = "/export/Development/DataMining/TrapsEMEA/Short/Model_Traps.model";
+    private String modelFile; // = "/export/Development/DataMining/TrapsEMEA/Short/Model_Traps.model";
+    private String databaseUtilsFile; // = "/home/cs8170/DatabaseUtils.props";
+    private String dbURL; // = "jdbc:hsqldb:hsql://localhost:9001/outagesdb";
     private FilteredClassifier cls;
     private Instances dataInst;
     private int offset;
     private int limit;
 
-    public Engine() {
+    public Engine(Properties prop) {
+        this.modelFile = prop.getProperty("model", "Model_Traps.model");
+        this.databaseUtilsFile = prop.getProperty("dbutils", "DatabaseUtils.props");
+        this.dbURL = prop.getProperty("dburl","jdbc:hsqldb:hsql://localhost:9001/outagesdb");
     }
 
     public void setOffset(int offset) {
@@ -80,10 +86,10 @@ public class Engine {
 
     private Instances getData() throws Exception {
         DatabaseLoader dload = new DatabaseLoader();
-        dload.setUrl("jdbc:hsqldb:hsql://localhost:9001/outagesdb");
+        dload.setUrl(dbURL);
         dload.setUser("sa");
         dload.setPassword("");
-        dload.setCustomPropsFile(new File("/home/cs8170/DatabaseUtils.props"));
+        dload.setCustomPropsFile(new File(databaseUtilsFile));
         dload.connectToDatabase();
         dload.setQuery("SELECT * FROM PUBLIC.OUTAGES LIMIT " + limit + " OFFSET " + offset + " ;");
         Instances dbData = dload.getDataSet();
@@ -104,6 +110,7 @@ public class Engine {
      * @throws Exception
      */
     public String trainModel() throws Exception {
+        System.out.println("\nCreating the model [" + modelFile + "] ");
         // Classifier
         J48 j48Class = new J48();
         j48Class.setUnpruned(true);
@@ -139,6 +146,8 @@ public class Engine {
     //</editor-fold>
 
     public String testData() throws Exception {
+        System.out.println("\nTesting the model [" + modelFile + "] ");
+        System.out.println("with " + limit + " outages ");
         // Load Model
         Object[] objectPack = weka.core.SerializationHelper.readAll(modelFile);
         cls = (FilteredClassifier) objectPack[0];
@@ -161,6 +170,7 @@ public class Engine {
                 String predicted = dataTrainedInst.classAttribute().value(pred);
                 if (!actual.equals(predicted)) {
                     incorrect++;
+                    System.out.print("Instance [" + i.toString(2).substring(0, 40) + "... ] ");
                     System.out.print("actual: " + actual);
                     System.out.println(", predicted: " + predicted);
                 }

@@ -1,5 +1,9 @@
 package emeatraps;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
 /**
  *
  * @author Radoslav Tsvetkov
@@ -12,7 +16,10 @@ public class EMEATraps {
             printUsage();
         }
 
-        Engine engin = new Engine();
+        Properties prop = new Properties();
+        prop.load(new FileInputStream("config.properties"));
+        
+        Engine engin = new Engine(prop);
         String result = "";
         engin.setLimit(Integer.parseInt(args[1]));
         engin.setOffset(Integer.parseInt(args[2]));
